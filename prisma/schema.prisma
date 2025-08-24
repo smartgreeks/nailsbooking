@@ -9,14 +9,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-// Add this for seeding
-seed {
-  runner = "tsx"
-  path = "prisma/seed.ts"
 }
 
 model Customer {
