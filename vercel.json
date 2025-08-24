@@ -1,11 +1,5 @@
 {
   "installCommand": "npm install",
-  "builds": [
-    {
-      "src": "next.config.ts",
-      "use": "@vercel/next"
-    }
-  ],
   "functions": {
     "app/api/**/*.ts": {
       "maxDuration": 30
