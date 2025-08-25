@@ -5,7 +5,7 @@ export async function GET() {
   try {
     const services = await db.service.findMany({
       where: {
-        isActive: true
+        isactive: true
       },
       orderBy: {
         name: 'asc'
