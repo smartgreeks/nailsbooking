@@ -14,21 +14,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Z.ai Code Scaffold - AI-Powered Development",
-  description: "Modern Next.js scaffold optimized for AI-powered development with Z.ai. Built with TypeScript, Tailwind CSS, and shadcn/ui.",
-  keywords: ["Z.ai", "Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui", "AI development", "React"],
-  authors: [{ name: "Z.ai Team" }],
+  title: "Demo Page for Nail Saloons Booking System",
+  description: "Modern Next.js scaffold optimized for Nail Saloons Booking System. Built with TypeScript, Tailwind CSS, and shadcn/ui.",
+  keywords: ["Nails", "Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui", "Greekpapa development", "React"],
+  authors: [{ name: "SmartGreeks" }],
   openGraph: {
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
-    url: "https://chat.z.ai",
-    siteName: "Z.ai",
+    title: "SmartGreeks Scaffold",
+    description: "Booking System development with modern React stack",
+    url: "https://smartgreeks.com",
+    siteName: "Smartgreeks",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
+    title: "Nail Saloons Booking System",
+    description: "Nail Saloons Booking System with modern React stack",
   },
 };
 
