@@ -17,7 +17,7 @@ interface Service {
   description?: string
   duration: number
   price: number
-  isActive: boolean
+  isactive: boolean
   createdAt: string
   updatedAt: string
 }
@@ -32,7 +32,7 @@ export default function ServiceManagement() {
     description: "",
     duration: 30,
     price: 20,
-    isActive: true
+    isactive: true
   })
   const { toast } = useToast()
 
@@ -42,7 +42,7 @@ export default function ServiceManagement() {
 
   const fetchServices = async () => {
     try {
-      const response = await fetch('/api/services')
+      const response = await fetch('/api/services', { cache: 'no-store' })
       if (response.ok) {
         const servicesData = await response.json()
         setServices(servicesData)
@@ -76,7 +76,7 @@ export default function ServiceManagement() {
           description: "",
           duration: 30,
           price: 20,
-          isActive: true
+          isactive: true
         })
       } else {
         const error = await response.json()
@@ -135,13 +135,13 @@ export default function ServiceManagement() {
     }
   }
 
-  const handleToggleActive = async (serviceId: string, isActive: boolean) => {
+  const handleToggleActive = async (serviceId: string, isactive: boolean) => {
     try {
-      await handleUpdateService(serviceId, { isActive })
+      await handleUpdateService(serviceId, { isactive })
       const serviceName = services.find(s => s.id === serviceId)?.name || "Υπηρεσία"
       toast({
         title: "Επιτυχής ενημέρωση",
-        description: `Η υπηρεσία "${serviceName}" ${isActive ? 'ενεργοποιήθηκε' : 'απενεργοποιήθηκε'} επιτυχώς.`,
+        description: `Η υπηρεσία "${serviceName}" ${isactive ? 'ενεργοποιήθηκε' : 'απενεργοποιήθηκε'} επιτυχώς.`,
       })
     } catch (error) {
       toast({
@@ -223,11 +223,11 @@ export default function ServiceManagement() {
               </div>
               <div className="flex items-center space-x-2">
                 <Switch
-                  id="isActive"
-                  checked={newService.isActive}
-                  onCheckedChange={(checked) => setNewService({...newService, isActive: checked})}
+                  id="isactive"
+                  checked={newService.isactive}
+                  onCheckedChange={(checked) => setNewService({...newService, isactive: checked})}
                 />
-                <Label htmlFor="isActive">Ενεργή υπηρεσία</Label>
+                <Label htmlFor="isactive">Ενεργή υπηρεσία</Label>
               </div>
               <div className="flex gap-2 pt-4">
                 <Button 
@@ -267,13 +267,13 @@ export default function ServiceManagement() {
       ) : (
         <div className="grid gap-4">
           {services.map((service) => (
-            <Card key={service.id} className={!service.isActive ? "opacity-60" : ""}>
+            <Card key={service.id} className={!service.isactive ? "opacity-60" : ""}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-lg font-medium">{service.name}</h3>
-                      {!service.isActive && (
+                      {!service.isactive && (
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                           Ανενεργή
                         </span>
@@ -295,7 +295,7 @@ export default function ServiceManagement() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch
-                      checked={service.isActive}
+                      checked={service.isactive}
                       onCheckedChange={(checked) => handleToggleActive(service.id, checked)}
                       className="transition-colors duration-200"
                     />
@@ -375,11 +375,11 @@ export default function ServiceManagement() {
               </div>
               <div className="flex items-center space-x-2">
                 <Switch
-                  id="edit-isActive"
-                  checked={editingService.isActive}
-                  onCheckedChange={(checked) => setEditingService({...editingService, isActive: checked})}
+                  id="edit-isactive"
+                  checked={editingService.isactive}
+                  onCheckedChange={(checked) => setEditingService({...editingService, isactive: checked})}
                 />
-                <Label htmlFor="edit-isActive">Ενεργή υπηρεσία</Label>
+                <Label htmlFor="edit-isactive">Ενεργή υπηρεσία</Label>
               </div>
               <div className="flex gap-2 pt-4">
                 <Button 
