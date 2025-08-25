@@ -7,7 +7,7 @@ export async function PUT(
 ) {
   try {
     const body = await request.json()
-    const { name, description, duration, price, isActive } = body
+    const { name, description, duration, price, isactive } = body
 
     const service = await db.service.update({
       where: { id: params.id },
@@ -16,7 +16,7 @@ export async function PUT(
         ...(description !== undefined && { description }),
         ...(duration && { duration }),
         ...(price && { price }),
-        ...(isActive !== undefined && { isActive })
+        ...(isactive !== undefined && { isactive })
       }
     })
 
