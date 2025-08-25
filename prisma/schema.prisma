@@ -32,7 +32,7 @@ model Service {
   description String?
   duration    Int      // in minutes
   price       Float
-  isActive    Boolean  @default(true)
+  isactive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
