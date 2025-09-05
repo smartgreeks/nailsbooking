@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Trash2, Plus, Users, Calendar, Database, AlertTriangle, RefreshCw, Settings, Home, ArrowLeft } from "lucide-react"
+import { Trash2, Plus, Users, BarChart3, Database, AlertTriangle, RefreshCw, Settings, Home, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -316,13 +316,7 @@ export default function AdminPage() {
         </Button>
       </div>
 
-      {/* Warning Alert */}
-      <Alert className="border-orange-200 bg-orange-50">
-        <AlertTriangle className="h-4 w-4 text-orange-600" />
-        <AlertDescription className="text-orange-800">
-          <strong>Προσοχή:</strong> Αυτή η σελίδα είναι για δοκιμές. Όλα τα δεδομένα που δημιουργούνται εδώ πρέπει να διαγραφούν πριν το deployment.
-        </AlertDescription>
-      </Alert>
+
 
       {error && (
         <Alert className="border-red-200 bg-red-50">
@@ -345,7 +339,7 @@ export default function AdminPage() {
             </TabsTrigger>
             <TabsTrigger value="appointments-calendar" className="text-xs sm:text-sm px-2 py-2 whitespace-nowrap">
               <span className="hidden sm:inline">Στατιστικά</span>
-              <Calendar className="h-4 w-4 sm:hidden" />
+              <BarChart3 className="h-4 w-4 sm:hidden" />
             </TabsTrigger>
             <TabsTrigger value="customers-management" className="text-xs sm:text-sm px-2 py-2 whitespace-nowrap">
               <span className="hidden sm:inline">Πελάτες</span>

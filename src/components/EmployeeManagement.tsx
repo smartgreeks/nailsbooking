@@ -94,15 +94,18 @@ export default function EmployeeManagement({ onEmployeeCreated, refreshTrigger }
   })
 
   useEffect(() => {
+    console.log('🔄 useEffect triggered, refreshTrigger:', refreshTrigger)
     fetchEmployees()
     fetchServices()
   }, [refreshTrigger])
 
   const fetchEmployees = async () => {
+    console.log('🔄 Fetching employees...')
     try {
       const response = await fetch('/api/employees')
       if (response.ok) {
         const employeesData = await response.json()
+        console.log('✅ Employees fetched:', employeesData.length, 'employees')
         setEmployees(employeesData)
       }
     } catch (error) {
@@ -164,6 +167,7 @@ export default function EmployeeManagement({ onEmployeeCreated, refreshTrigger }
           },
           isActive: true
         })
+        console.log('✅ Employee created successfully, calling fetchEmployees and onEmployeeCreated')
         fetchEmployees()
         onEmployeeCreated?.()
       } else {
