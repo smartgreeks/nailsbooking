@@ -45,12 +45,22 @@ NEXTAUTH_SECRET=your-production-secret
 
 ## Database Migration
 
-After deployment, you'll need to run the Prisma migrations on your Supabase database:
+### Option A: Using SQL Migration (Recommended)
+
+1. Go to your Supabase project dashboard
+2. Navigate to the SQL Editor
+3. Copy and paste the contents of `supabase_migration.sql` file
+4. Execute the SQL script to create all tables and sample data
+
+### Option B: Using Prisma (Alternative)
+
+After deployment, you can also run:
 
 ```bash
-npx prisma migrate deploy
-npx prisma generate
+npx prisma db push
 ```
+
+Note: Make sure your environment variables are properly set before running Prisma commands.
 
 ## Important Notes
 
