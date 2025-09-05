@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Calendar, Clock, DollarSign, Users, Plus, X, Search } from "lucide-react"
+import { Calendar, Clock, DollarSign, Users, Plus, X, Search, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { DatePicker } from "@/components/ui/date-picker"
+import { useToast } from "@/hooks/use-toast"
 
 interface Service {
   id: string
@@ -26,10 +27,43 @@ interface Customer {
   phone: string
 }
 
+interface Employee {
+  id: string
+  name: string
+  email?: string
+  phone?: string
+  isActive: boolean
+  employeeServices: {
+    service: Service
+  }[]
+}
+
+interface AvailableEmployee extends Employee {
+  isAvailable: boolean
+  availableSlots: { start: string; end: string }[]
+  reason?: string
+}
+
+interface Appointment {
+  id: string
+  date: string
+  status: string
+  notes?: string
+  totalDuration: number
+  totalPrice: number
+  customer: Customer
+  employee?: Employee
+  services: {
+    id: string
+    service: Service
+  }[]
+}
+
 interface AppointmentBookingDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   customer?: Customer | null
+  editingAppointment?: Appointment | null
   onAppointmentCreated?: () => void
 }
 
@@ -37,18 +71,25 @@ export default function AppointmentBookingDialog({
   open,
   onOpenChange,
   customer,
+  editingAppointment,
   onAppointmentCreated
 }: AppointmentBookingDialogProps) {
+  const { toast } = useToast()
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [selectedTime, setSelectedTime] = useState("")
   const [selectedServices, setSelectedServices] = useState<string[]>([])
+  const [selectedEmployee, setSelectedEmployee] = useState<string>("") 
   const [notes, setNotes] = useState("")
   const [services, setServices] = useState<Service[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [availableEmployees, setAvailableEmployees] = useState<AvailableEmployee[]>([])
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(customer || null)
   const [customerSearch, setCustomerSearch] = useState("")
   const [showCustomerSearch, setShowCustomerSearch] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [loadingAvailability, setLoadingAvailability] = useState(false)
+  const [creatingAppointment, setCreatingAppointment] = useState(false)
   const [error, setError] = useState("")
   const [dateError, setDateError] = useState("")
 
@@ -56,13 +97,27 @@ export default function AppointmentBookingDialog({
     if (open) {
       fetchServices()
       fetchCustomers()
-      // Set default date to today
-      const today = new Date()
-      setSelectedDate(today)
-      setSelectedCustomer(customer || null)
+      fetchEmployees()
+      
+      if (editingAppointment) {
+        // Load existing appointment data
+        const appointmentDate = new Date(editingAppointment.date)
+        setSelectedDate(appointmentDate)
+        setSelectedTime(appointmentDate.toTimeString().slice(0, 5))
+        setSelectedServices(editingAppointment.services.map(s => s.service.id))
+        setSelectedEmployee(editingAppointment.employee?.id || "")
+        setNotes(editingAppointment.notes || "")
+        setSelectedCustomer(editingAppointment.customer)
+      } else {
+        // Set default date to today for new appointments
+        const today = new Date()
+        setSelectedDate(today)
+        setSelectedCustomer(customer || null)
+      }
     } else {
       // Reset form when dialog closes
       setSelectedServices([])
+      setSelectedEmployee("")
       setNotes("")
       setSelectedTime("")
       setCustomerSearch("")
@@ -70,8 +125,9 @@ export default function AppointmentBookingDialog({
       setError("")
       setDateError("")
       setSelectedDate(undefined)
+      setAvailableEmployees([])
     }
-  }, [open, customer])
+  }, [open, customer, editingAppointment])
 
   const fetchServices = async () => {
     try {
@@ -96,6 +152,61 @@ export default function AppointmentBookingDialog({
       console.error('Error fetching customers:', error)
     }
   }
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await fetch('/api/employees')
+      if (response.ok) {
+        const employeesData = await response.json()
+        setEmployees(employeesData)
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error)
+    }
+  }
+
+  const fetchAvailableEmployees = async () => {
+    if (!selectedDate || selectedServices.length === 0) {
+      setAvailableEmployees([])
+      return
+    }
+
+    setLoadingAvailability(true)
+    try {
+      const serviceId = selectedServices[0] // Use first selected service for availability check
+      const dateStr = selectedDate.toISOString().split('T')[0]
+      
+      const response = await fetch(`/api/employees/availability?serviceId=${serviceId}&date=${dateStr}`)
+      if (response.ok) {
+        const availabilityData = await response.json()
+        let employees = availabilityData.employees || []
+        
+        // If a time is selected, filter employees who are available at that specific time
+        if (selectedTime) {
+          employees = employees.filter(employee => {
+            if (!employee.availableSlots) return false
+            return employee.availableSlots.some(slot => slot.start === selectedTime)
+          })
+          
+          // Clear selected employee if they are no longer available at the selected time
+          if (selectedEmployee && !employees.find(emp => emp.id === selectedEmployee)) {
+            setSelectedEmployee("")
+          }
+        }
+        
+        setAvailableEmployees(employees)
+      }
+    } catch (error) {
+      console.error('Error fetching employee availability:', error)
+    } finally {
+      setLoadingAvailability(false)
+    }
+  }
+
+  // Fetch availability when date, services, or time change
+  useEffect(() => {
+    fetchAvailableEmployees()
+  }, [selectedDate, selectedServices, selectedTime])
 
   const handleServiceToggle = (serviceId: string, checked: boolean) => {
     if (checked) {
@@ -158,7 +269,7 @@ export default function AppointmentBookingDialog({
   }
 
   const handleCreateAppointment = async () => {
-    if (!selectedCustomer || !selectedDate || !selectedTime || selectedServices.length === 0) {
+    if (!selectedCustomer || !selectedDate || !selectedTime || selectedServices.length === 0 || !selectedEmployee) {
       setError("Παρακαλώ συμπληρώστε όλα τα απαιτούμενα πεδία")
       return
     }
@@ -167,14 +278,21 @@ export default function AppointmentBookingDialog({
       return
     }
 
-    setLoading(true)
+    setCreatingAppointment(true)
     setError("")
 
     try {
-      const appointmentDateTime = new Date(`${selectedDate.toISOString().split('T')[0]}T${selectedTime}`)
+      // Create proper datetime by combining date and time
+      const appointmentDateTime = new Date(selectedDate)
+      const [hours, minutes] = selectedTime.split(':')
+      appointmentDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0)
       
-      const response = await fetch('/api/appointments', {
-        method: 'POST',
+      const isEditing = !!editingAppointment
+      const url = isEditing ? `/api/appointments/${editingAppointment.id}` : '/api/appointments'
+      const method = isEditing ? 'PUT' : 'POST'
+      
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -182,30 +300,39 @@ export default function AppointmentBookingDialog({
           customerId: selectedCustomer.id,
           date: appointmentDateTime.toISOString(),
           serviceIds: selectedServices,
+          employeeId: selectedEmployee,
           notes
         }),
       })
 
       if (response.ok) {
+        // Show success notification
+        toast({
+          title: isEditing ? "Επιτυχής ενημέρωση!" : "Επιτυχής κράτηση!",
+          description: isEditing ? "Το ραντεβού ενημερώθηκε επιτυχώς." : "Το ραντεβού δημιουργήθηκε επιτυχώς.",
+        })
+        
         // Reset form
         setSelectedServices([])
+        setSelectedEmployee("")
         setNotes("")
         setSelectedTime("")
         setCustomerSearch("")
         setShowCustomerSearch(false)
         setDateError("")
         setSelectedDate(undefined)
+        setAvailableEmployees([])
         onOpenChange(false)
         onAppointmentCreated?.()
       } else {
         const errorData = await response.json()
-        setError(errorData.error || "Παρουσιάστηκε σφάλμα κατά τη δημιουργία ραντεβού")
+        setError(errorData.error || (isEditing ? "Παρουσιάστηκε σφάλμα κατά την ενημέρωση ραντεβού" : "Παρουσιάστηκε σφάλμα κατά τη δημιουργία ραντεβού"))
       }
     } catch (error) {
-      console.error('Create appointment error:', error)
-      setError("Παρουσιάστηκε σφάλμα κατά τη δημιουργία ραντεβού")
+      console.error('Create/Update appointment error:', error)
+      setError(editingAppointment ? "Παρουσιάστηκε σφάλμα κατά την ενημέρωση ραντεβού" : "Παρουσιάστηκε σφάλμα κατά τη δημιουργία ραντεβού")
     } finally {
-      setLoading(false)
+      setCreatingAppointment(false)
     }
   }
 
@@ -222,10 +349,13 @@ export default function AppointmentBookingDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            Νέο Ραντεβού
+            {editingAppointment ? 'Επεξεργασία Ραντεβού' : 'Νέο Ραντεβού'}
           </DialogTitle>
           <DialogDescription>
-            {selectedCustomer ? `Κράτηση ραντεβού για ${selectedCustomer.name}` : 'Επιλέξτε πελάτη και υπηρεσίες για το ραντεβού'}
+            {editingAppointment 
+              ? `Επεξεργασία ραντεβού για ${selectedCustomer?.name}` 
+              : (selectedCustomer ? `Κράτηση ραντεβού για ${selectedCustomer.name}` : 'Επιλέξτε πελάτη και υπηρεσίες για το ραντεβού')
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -398,6 +528,91 @@ export default function AppointmentBookingDialog({
             </div>
           </div>
 
+          {/* Employee Selection */}
+          {selectedServices.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Επιλογή Εργαζομένου *
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingAvailability ? (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-600">Φόρτωση διαθεσιμότητας...</p>
+                  </div>
+                ) : availableEmployees.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-600">Δεν υπάρχουν διαθέσιμοι εργαζόμενοι για την επιλεγμένη ημερομηνία και υπηρεσία</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {availableEmployees.map((employee) => (
+                      <Card 
+                        key={employee.id} 
+                        className={`cursor-pointer transition-colors ${
+                          selectedEmployee === employee.id 
+                            ? 'border-blue-500 bg-blue-50' 
+                            : 'hover:bg-gray-50'
+                        }`}
+                        onClick={() => setSelectedEmployee(employee.id)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full ${
+                                  selectedEmployee === employee.id ? 'bg-blue-500' : 'bg-gray-300'
+                                }`} />
+                                <h4 className="font-medium">{employee.name}</h4>
+                              </div>
+                              {employee.email && (
+                                <p className="text-sm text-gray-600 mt-1">{employee.email}</p>
+                              )}
+                              <div className="mt-2">
+                                <p className="text-xs text-gray-500">
+                                  Ειδικότητες: {employee.employeeServices.map(es => es.service.name).join(', ')}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                employee.isAvailable 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {employee.isAvailable ? 'Διαθέσιμος' : 'Μη Διαθέσιμος'}
+                              </span>
+                            </div>
+                          </div>
+                          {employee.isAvailable && employee.availableSlots.length > 0 && (
+                            <div className="mt-3">
+                              <p className="text-xs text-gray-500 mb-2">Διαθέσιμες ώρες:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {employee.availableSlots.slice(0, 6).map((slot, index) => (
+                                  <span 
+                                    key={index}
+                                    className="inline-block px-2 py-1 bg-gray-100 text-xs rounded"
+                                  >
+                                    {slot.start} - {slot.end}
+                                  </span>
+                                ))}
+                                {employee.availableSlots.length > 6 && (
+                                  <span className="text-xs text-gray-500">+{employee.availableSlots.length - 6} περισσότερες</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Notes */}
           <div>
             <Label htmlFor="notes">Σημειώσεις</Label>
@@ -452,9 +667,12 @@ export default function AppointmentBookingDialog({
             <Button 
               onClick={handleCreateAppointment}
               className="bg-pink-600 hover:bg-pink-700 flex-1"
-              disabled={loading || !selectedCustomer || !selectedDate || !selectedTime || selectedServices.length === 0 || !!dateError}
+              disabled={creatingAppointment || !selectedCustomer || !selectedDate || !selectedTime || selectedServices.length === 0 || !selectedEmployee || !!dateError}
             >
-              {loading ? 'Δημιουργία...' : 'Κράτηση Ραντεβού'}
+              {creatingAppointment 
+                ? (editingAppointment ? 'Ενημέρωση...' : 'Δημιουργία...') 
+                : (editingAppointment ? 'Ενημέρωση Ραντεβού' : 'Κράτηση Ραντεβού')
+              }
             </Button>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Ακύρωση

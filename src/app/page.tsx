@@ -1,18 +1,18 @@
 "use client"
 
 import { useState } from "react"
-import { Search, Phone, Calendar, Users, Star, Plus, Clock, MapPin, Settings } from "lucide-react"
+import { Search, Phone, Calendar, Plus, Shield, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import SimpleCalendar from "@/components/SimpleCalendar"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/hooks/use-toast"
 import AppointmentBookingDialog from "@/components/AppointmentBookingDialog"
-import AppointmentsCalendar from "@/components/AppointmentsCalendar"
-import CustomerManagement from "@/components/CustomerManagement"
-import ServiceManagement from "@/components/ServiceManagement"
+import Link from "next/link"
 
 interface Customer {
   id: string
@@ -48,6 +48,7 @@ interface Service {
 }
 
 export default function NailStudioDashboard() {
+  const { toast } = useToast()
   const [searchPhone, setSearchPhone] = useState("")
   const [activeTab, setActiveTab] = useState("search")
   const [searchResult, setSearchResult] = useState<Customer | null>(null)
@@ -107,6 +108,13 @@ export default function NailStudioDashboard() {
 
       if (response.ok) {
         const customer = await response.json()
+        
+        // Show success notification
+        toast({
+          title: "Επιτυχής δημιουργία!",
+          description: `Ο πελάτης ${customer.name} δημιουργήθηκε επιτυχώς.`,
+        })
+        
         // Make a new search to get the complete customer data with appointments
         setSearchPhone(customer.phone)
         const searchResponse = await fetch(`/api/customers/search?phone=${encodeURIComponent(customer.phone)}`)
@@ -148,6 +156,8 @@ export default function NailStudioDashboard() {
     if (searchResult) {
       handleSearch()
     }
+    // Auto-close customer card after appointment creation
+    setSearchResult(null)
   }
 
   const handleCustomerUpdated = () => {
@@ -203,7 +213,15 @@ export default function NailStudioDashboard() {
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 p-2 sm:p-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <header className="text-center py-4 sm:py-8">
+        <header className="text-center py-4 sm:py-8 relative">
+          <div className="absolute top-4 right-4">
+            <Link href="/admin">
+              <Button variant="outline" size="sm" className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Admin
+              </Button>
+            </Link>
+          </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-1 sm:mb-2">
             Nail Studio
           </h1>
@@ -214,22 +232,14 @@ export default function NailStudioDashboard() {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-1 mb-24 sm:mb-8 pb-4 bg-white rounded-lg p-3 shadow-sm sticky top-4 z-10">
+          <TabsList className="grid w-full grid-cols-2 gap-3 sm:gap-1 mb-24 sm:mb-8 pb-4 bg-white rounded-lg p-3 shadow-sm sticky top-4 z-10">
             <TabsTrigger value="search" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-4 sm:p-2 text-xs sm:text-sm border border-gray-300 bg-white hover:bg-gray-50 rounded-lg transition-colors data-[state=active]:bg-pink-100 data-[state=active]:border-pink-500 data-[state=active]:text-pink-700">
-              <Phone className="h-4 w-4 sm:h-4 sm:w-4" />
-              <span className="text-xs sm:text-sm">Αναζήτηση</span>
+              <Search className="h-4 w-4 sm:h-4 sm:w-4" />
+              <span className="text-xs sm:text-sm">Αναζήτηση Πελάτη</span>
             </TabsTrigger>
-            <TabsTrigger value="appointments" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-4 sm:p-2 text-xs sm:text-sm border border-gray-300 bg-white hover:bg-gray-50 rounded-lg transition-colors data-[state=active]:bg-pink-100 data-[state=active]:border-pink-500 data-[state=active]:text-pink-700">
+            <TabsTrigger value="calendar" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-4 sm:p-2 text-xs sm:text-sm border border-gray-300 bg-white hover:bg-gray-50 rounded-lg transition-colors data-[state=active]:bg-pink-100 data-[state=active]:border-pink-500 data-[state=active]:text-pink-700">
               <Calendar className="h-4 w-4 sm:h-4 sm:w-4" />
-              <span className="text-xs sm:text-sm">Ραντεβού</span>
-            </TabsTrigger>
-            <TabsTrigger value="customers" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-4 sm:p-2 text-xs sm:text-sm border border-gray-300 bg-white hover:bg-gray-50 rounded-lg transition-colors data-[state=active]:bg-pink-100 data-[state=active]:border-pink-500 data-[state=active]:text-pink-700">
-              <Users className="h-4 w-4 sm:h-4 sm:w-4" />
-              <span className="text-xs sm:text-sm">Πελάτες</span>
-            </TabsTrigger>
-            <TabsTrigger value="services" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-4 sm:p-2 text-xs sm:text-sm border border-gray-300 bg-white hover:bg-gray-50 rounded-lg transition-colors data-[state=active]:bg-pink-100 data-[state=active]:border-pink-500 data-[state=active]:text-pink-700">
-              <Settings className="h-4 w-4 sm:h-4 sm:w-4" />
-              <span className="text-xs sm:text-sm">Υπηρεσίες</span>
+              <span className="text-xs sm:text-sm">Ημερολόγιο</span>
             </TabsTrigger>
           </TabsList>
 
@@ -274,7 +284,17 @@ export default function NailStudioDashboard() {
                 {searchResult && (
                   <Card className="border-l-4 border-l-green-500">
                     <CardHeader>
-                      <CardTitle className="text-lg">Βρέθηκε Πελάτης</CardTitle>
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-lg">Βρέθηκε Πελάτης</CardTitle>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => setSearchResult(null)}
+                          className="h-8 w-8 p-0 hover:bg-gray-100"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -458,26 +478,10 @@ export default function NailStudioDashboard() {
             </Card>
           </TabsContent>
 
-          {/* Appointments Tab */}
-          <TabsContent value="appointments" className="space-y-4 sm:space-y-6 pt-4 sm:pt-0">
-            <AppointmentsCalendar 
-              onAppointmentCreated={handleAppointmentCreated}
-              refreshTrigger={customersRefreshTrigger}
-            />
+          <TabsContent value="calendar" className="space-y-4 sm:space-y-6 pt-4 sm:pt-0">
+            <SimpleCalendar />
           </TabsContent>
 
-          {/* Customers Tab */}
-          <TabsContent value="customers" className="space-y-4 sm:space-y-6 pt-4 sm:pt-0">
-            <CustomerManagement 
-              refreshTrigger={customersRefreshTrigger}
-              onCustomerUpdated={handleCustomerUpdated}
-            />
-          </TabsContent>
-
-          {/* Services Tab */}
-          <TabsContent value="services" className="space-y-4 sm:space-y-6 pt-4 sm:pt-0">
-            <ServiceManagement />
-          </TabsContent>
         </Tabs>
       </div>
 

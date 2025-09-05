@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { createErrorResponse } from '@/lib/api-utils'
 
 export async function GET() {
   try {
@@ -14,11 +15,7 @@ export async function GET() {
 
     return NextResponse.json(services)
   } catch (error) {
-    console.error('Error fetching services:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return createErrorResponse(error, 'Error fetching services')
   }
 }
 
@@ -46,10 +43,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(service, { status: 201 })
   } catch (error) {
-    console.error('Error creating service:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return createErrorResponse(error, 'Error creating service')
   }
 }

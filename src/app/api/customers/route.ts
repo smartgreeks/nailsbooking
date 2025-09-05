@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { createErrorResponse, createValidationErrorResponse } from '@/lib/api-utils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,10 +39,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(customer, { status: 201 })
   } catch (error) {
-    console.error('Error creating customer:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return createErrorResponse(error, 'Error creating customer')
   }
 }

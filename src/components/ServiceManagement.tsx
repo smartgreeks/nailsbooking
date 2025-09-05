@@ -27,6 +27,7 @@ export default function ServiceManagement() {
   const [loading, setLoading] = useState(false)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [editingService, setEditingService] = useState<Service | null>(null)
+  const [updatingServices, setUpdatingServices] = useState<Set<string>>(new Set())
   const [newService, setNewService] = useState({
     name: "",
     description: "",
@@ -42,7 +43,7 @@ export default function ServiceManagement() {
 
   const fetchServices = async () => {
     try {
-      const response = await fetch('/api/services', { cache: 'no-store' })
+      const response = await fetch('/api/services/admin', { cache: 'no-store' })
       if (response.ok) {
         const servicesData = await response.json()
         setServices(servicesData)
@@ -69,6 +70,14 @@ export default function ServiceManagement() {
       })
 
       if (response.ok) {
+        const createdService = await response.json()
+        
+        // Show success notification
+        toast({
+          title: "Επιτυχής δημιουργία!",
+          description: `Η υπηρεσία "${createdService.name}" δημιουργήθηκε επιτυχώς.`,
+        })
+        
         await fetchServices()
         setShowAddDialog(false)
         setNewService({
@@ -80,11 +89,19 @@ export default function ServiceManagement() {
         })
       } else {
         const error = await response.json()
-        alert(error.error || "Παρουσιάστηκε σφάλμα")
+        toast({
+          title: "Σφάλμα",
+          description: error.error || "Παρουσιάστηκε σφάλμα κατά τη δημιουργία της υπηρεσίας.",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       console.error('Error creating service:', error)
-      alert("Παρουσιάστηκε σφάλμα")
+      toast({
+        title: "Σφάλμα",
+        description: "Παρουσιάστηκε σφάλμα κατά τη δημιουργία της υπηρεσίας.",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -136,6 +153,9 @@ export default function ServiceManagement() {
   }
 
   const handleToggleActive = async (serviceId: string, isactive: boolean) => {
+    // Add service to updating set
+    setUpdatingServices(prev => new Set(prev).add(serviceId))
+    
     try {
       await handleUpdateService(serviceId, { isactive })
       const serviceName = services.find(s => s.id === serviceId)?.name || "Υπηρεσία"
@@ -148,6 +168,13 @@ export default function ServiceManagement() {
         title: "Σφάλμα",
         description: "Παρουσιάστηκε σφάλμα κατά την αλλαγή κατάστασης της υπηρεσίας.",
         variant: "destructive",
+      })
+    } finally {
+      // Remove service from updating set
+      setUpdatingServices(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(serviceId)
+        return newSet
       })
     }
   }
@@ -294,11 +321,17 @@ export default function ServiceManagement() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Switch
-                      checked={service.isactive}
-                      onCheckedChange={(checked) => handleToggleActive(service.id, checked)}
-                      className="transition-colors duration-200"
-                    />
+                    <div className="flex items-center gap-1">
+                      <Switch
+                        checked={service.isactive}
+                        onCheckedChange={(checked) => handleToggleActive(service.id, checked)}
+                        disabled={updatingServices.has(service.id)}
+                        className="transition-colors duration-200"
+                      />
+                      {updatingServices.has(service.id) && (
+                        <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                      )}
+                    </div>
                     <Button
                       variant="outline"
                       size="sm"

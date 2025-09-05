@@ -7,39 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 import AppointmentBookingDialog from "@/components/AppointmentBookingDialog"
 import StatisticsDashboard from "@/components/StatisticsDashboard"
-
-interface Service {
-  id: string
-  name: string
-  description?: string
-  duration: number
-  price: number
-}
-
-interface Customer {
-  id: string
-  name: string
-  phone: string
-  email?: string
-}
-
-interface AppointmentService {
-  id: string
-  service: Service
-}
-
-interface Appointment {
-  id: string
-  date: string
-  status: string
-  notes?: string
-  totalDuration: number
-  totalPrice: number
-  customer: Customer
-  services: AppointmentService[]
-}
+import type { Appointment, Customer, Employee, Service, AppointmentService } from "@/types"
 
 interface AppointmentsCalendarProps {
   onAppointmentCreated?: () => void
@@ -57,6 +28,10 @@ export default function AppointmentsCalendar({ onAppointmentCreated, refreshTrig
   const [showBookingDialog, setShowBookingDialog] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [appointmentToDelete, setAppointmentToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     fetchAppointments()
@@ -105,38 +80,61 @@ export default function AppointmentsCalendar({ onAppointmentCreated, refreshTrig
         return appDate.toDateString() === selectedDay.toDateString()
       })
     } else {
-      // Original filtering logic for other view modes
-      const now = new Date()
-      switch (viewMode) {
-        case 'day':
-          filtered = filtered.filter(app => {
-            const appDate = new Date(app.date)
-            return appDate.toDateString() === now.toDateString()
-          })
-          break
-        case 'week':
-          const weekStart = new Date(now)
-          weekStart.setDate(now.getDate() - now.getDay())
-          const weekEnd = new Date(weekStart)
-          weekEnd.setDate(weekStart.getDate() + 6)
-          filtered = filtered.filter(app => {
-            const appDate = new Date(app.date)
-            return appDate >= weekStart && appDate <= weekEnd
-          })
-          break
-        case 'month':
-        default:
-          filtered = filtered.filter(app => {
-            const appDate = new Date(app.date)
-            return appDate.getMonth() === now.getMonth() && appDate.getFullYear() === now.getFullYear()
-          })
-          break
-      }
+      // Show ALL appointments for testing - remove date filtering temporarily
+      console.log('Showing all appointments for testing:', filtered.length)
     }
 
     // Sort by date
     filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     setFilteredAppointments(filtered)
+  }
+
+  const handleEditAppointment = (appointment: Appointment) => {
+    console.log('Edit button clicked for appointment:', appointment.id)
+    setEditingAppointment(appointment)
+    setSelectedCustomer(appointment.customer)
+    setShowEditDialog(true)
+  }
+
+  const handleDeleteAppointment = (appointmentId: string) => {
+    console.log('Delete button clicked for appointment:', appointmentId)
+    setAppointmentToDelete(appointmentId)
+    setShowDeleteDialog(true)
+  }
+
+  const confirmDeleteAppointment = async () => {
+    if (!appointmentToDelete) return
+    
+    try {
+      const response = await fetch(`/api/appointments/${appointmentToDelete}`, {
+        method: 'DELETE',
+      })
+      
+      if (response.ok) {
+        // Refresh appointments list
+        fetchAppointments()
+        if (onAppointmentCreated) {
+          onAppointmentCreated()
+        }
+      } else {
+        alert('Σφάλμα κατά τη διαγραφή του ραντεβού')
+      }
+    } catch (error) {
+      console.error('Error deleting appointment:', error)
+      alert('Σφάλμα κατά τη διαγραφή του ραντεβού')
+    } finally {
+      setAppointmentToDelete(null)
+    }
+  }
+
+  const handleAppointmentUpdated = () => {
+    setShowEditDialog(false)
+    setEditingAppointment(null)
+    setSelectedCustomer(null)
+    fetchAppointments()
+    if (onAppointmentCreated) {
+      onAppointmentCreated()
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -273,6 +271,20 @@ export default function AppointmentsCalendar({ onAppointmentCreated, refreshTrig
 
   return (
     <div className="space-y-6">
+      {/* Test Button */}
+      <div className="mb-4 p-4 bg-yellow-100 border border-yellow-300 rounded">
+        <h3 className="text-lg font-semibold mb-2">Test Button</h3>
+        <button 
+          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+          onClick={() => {
+            alert('Test button works!');
+            console.log('Test button clicked successfully');
+          }}
+        >
+          Click Me - Test
+        </button>
+      </div>
+
       {/* Statistics Dashboard */}
       <StatisticsDashboard appointments={appointments} />
 
@@ -416,7 +428,7 @@ export default function AppointmentsCalendar({ onAppointmentCreated, refreshTrig
                         <div
                           key={appointment.id}
                           className={`text-xs p-1 sm:p-1.5 rounded cursor-pointer hover:opacity-80 touch-manipulation ${getStatusColor(appointment.status)}`}
-                          title={`${appointment.customer.name} - ${appointment.services.map(s => s.service.name).join(', ')}`}
+                          title={`${appointment.customer.name} - ${appointment.services.map(s => s.service.name).join(', ')}${appointment.employee ? ` - ${appointment.employee.name}` : ''}`}
                         >
                           <div className="font-medium truncate">
                             {new Date(appointment.date).toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })}
@@ -424,6 +436,11 @@ export default function AppointmentsCalendar({ onAppointmentCreated, refreshTrig
                           <div className="truncate">
                             {appointment.customer.name}
                           </div>
+                          {appointment.employee && (
+                            <div className="truncate text-gray-600">
+                              {appointment.employee.name}
+                            </div>
+                          )}
                         </div>
                       ))}
                       {dayAppointments.length > 3 && (
@@ -483,36 +500,40 @@ export default function AppointmentsCalendar({ onAppointmentCreated, refreshTrig
           ) : (
             <div className="space-y-3 sm:space-y-4">
               {filteredAppointments.map((appointment) => (
-                <Card key={appointment.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4 sm:p-6">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
-                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 rounded-full flex items-center justify-center">
-                            <span className="text-pink-600 font-semibold text-sm sm:text-base">
-                              {appointment.customer.name.split(' ').map(n => n[0]).join('')}
-                            </span>
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-sm sm:text-base">{appointment.customer.name}</h4>
-                            <p className="text-sm text-gray-600">{appointment.customer.phone}</p>
-                          </div>
+                <div key={appointment.id} className="border rounded-lg p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 rounded-full flex items-center justify-center">
+                          <span className="text-pink-600 font-semibold text-sm sm:text-base">
+                            {appointment.customer.name.split(' ').map(n => n[0]).join('')}
+                          </span>
                         </div>
-                        
-                        <div className="flex flex-wrap gap-3 sm:gap-4 text-sm">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4 text-gray-400" />
-                            <span>{formatDateTime(appointment.date)}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <DollarSign className="h-4 w-4 text-gray-400" />
-                            <span>{appointment.totalPrice}€</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-gray-400">Διάρκεια:</span>
-                            <span>{appointment.totalDuration} λεπτά</span>
-                          </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-sm sm:text-base">{appointment.customer.name}</h4>
+                          <p className="text-sm text-gray-600">{appointment.customer.phone}</p>
+                          {appointment.employee && (
+                            <p className="text-sm text-blue-600 font-medium">
+                              Εργαζόμενη: {appointment.employee.name}
+                            </p>
+                          )}
                         </div>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-3 sm:gap-4 text-sm">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4 text-gray-400" />
+                          <span>{formatDateTime(appointment.date)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <DollarSign className="h-4 w-4 text-gray-400" />
+                          <span>{appointment.totalPrice}€</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-gray-400">Διάρκεια:</span>
+                          <span>{appointment.totalDuration} λεπτά</span>
+                        </div>
+                      </div>
                         
                         {appointment.services.length > 0 && (
                           <div className="mt-2 sm:mt-3">
@@ -537,18 +558,31 @@ export default function AppointmentsCalendar({ onAppointmentCreated, refreshTrig
                         </Badge>
                         
                         <div className="flex gap-2 sm:gap-3">
-                          <Button variant="outline" size="default" className="h-8 sm:h-9 w-8 sm:w-9 p-0">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="default" className="h-8 sm:h-9 w-8 sm:w-9 p-0">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <button
+                            className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer"
+                            onClick={() => {
+                              alert('Edit button clicked!')
+                              console.log('Edit button clicked for appointment:', appointment.id)
+                              handleEditAppointment(appointment)
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 cursor-pointer"
+                            onClick={() => {
+                              alert('Delete button clicked!')
+                              console.log('Delete button clicked for appointment:', appointment.id)
+                              handleDeleteAppointment(appointment.id)
+                            }}
+                          >
+                            Delete
+                          </button>
                         </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  </div>
+                ))}
             </div>
           )}
         </CardContent>
@@ -560,6 +594,27 @@ export default function AppointmentsCalendar({ onAppointmentCreated, refreshTrig
         onOpenChange={setShowBookingDialog}
         customer={selectedCustomer}
         onAppointmentCreated={handleAppointmentCreated}
+      />
+
+      {/* Edit Appointment Dialog */}
+      <AppointmentBookingDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        customer={selectedCustomer}
+        editingAppointment={editingAppointment}
+        onAppointmentCreated={handleAppointmentUpdated}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Διαγραφή Ραντεβού"
+        description="Είστε σίγουρος ότι θέλετε να διαγράψετε αυτό το ραντεβού; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί."
+        confirmText="Διαγραφή"
+        cancelText="Ακύρωση"
+        onConfirm={confirmDeleteAppointment}
+        variant="destructive"
       />
     </div>
   )

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { createErrorResponse, createValidationErrorResponse, createSuccessResponse, ValidationPatterns } from '@/lib/api-utils'
 
 export async function PUT(
   request: NextRequest,
@@ -10,10 +11,7 @@ export async function PUT(
     const { name, phone, email, notes, preferences } = body
 
     if (!name || !phone) {
-      return NextResponse.json(
-        { error: 'Name and phone are required' },
-        { status: 400 }
-      )
+      return createValidationErrorResponse('Name and phone are required')
     }
 
     // Check if another customer with this phone already exists
@@ -25,10 +23,7 @@ export async function PUT(
     })
 
     if (existingCustomer) {
-      return NextResponse.json(
-        { error: 'Another customer with this phone number already exists' },
-        { status: 409 }
-      )
+      return createValidationErrorResponse('Another customer with this phone number already exists', 409)
     }
 
     const customer = await db.customer.update({
@@ -44,11 +39,7 @@ export async function PUT(
 
     return NextResponse.json(customer)
   } catch (error) {
-    console.error('Error updating customer:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return createErrorResponse(error, 'Error updating customer')
   }
 }
 
@@ -63,22 +54,15 @@ export async function DELETE(
     })
 
     if (appointmentsCount > 0) {
-      return NextResponse.json(
-        { error: 'Cannot delete customer with existing appointments' },
-        { status: 400 }
-      )
+      return createValidationErrorResponse('Cannot delete customer with existing appointments')
     }
 
     await db.customer.delete({
       where: { id: params.id }
     })
 
-    return NextResponse.json({ success: true })
+    return createSuccessResponse()
   } catch (error) {
-    console.error('Error deleting customer:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return createErrorResponse(error, 'Error deleting customer')
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { createErrorResponse, createSuccessResponse } from '@/lib/api-utils'
 
 export async function PUT(
   request: NextRequest,
@@ -22,11 +23,7 @@ export async function PUT(
 
     return NextResponse.json(service)
   } catch (error) {
-    console.error('Error updating service:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return createErrorResponse(error, 'Error updating service')
   }
 }
 
@@ -39,12 +36,8 @@ export async function DELETE(
       where: { id: params.id }
     })
 
-    return NextResponse.json({ success: true })
+    return createSuccessResponse()
   } catch (error) {
-    console.error('Error deleting service:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return createErrorResponse(error, 'Error deleting service')
   }
 }

@@ -109,6 +109,77 @@ async function main() {
     console.log(`Found ${existingServices.length} existing services, skipping seed`)
   }
 
+  // Check if employees already exist
+  const existingEmployees = await prisma.employee.findMany()
+  
+  if (existingEmployees.length === 0) {
+    console.log('Creating default employees...')
+    
+    // Get all services for employee assignments
+    const allServices = await prisma.service.findMany()
+    
+    const defaultEmployees = [
+      {
+        name: 'Μαρία Παπαδοπούλου',
+        email: 'maria@nailsalon.gr',
+        phone: '6901234567',
+        specialties: 'Μανικιρ, Gel, Διακόσμηση',
+        workingHours: '09:00-18:00',
+        isActive: true,
+        services: ['Μανικιρ Βασικό', 'Μανικιρ με Γαλλικό', 'Gel Μανικιρ', 'Spa Μανικιρ', 'Διακόσμηση Νυχιών', 'Επισκευή Νυχιού']
+      },
+      {
+        name: 'Ελένη Γεωργίου',
+        email: 'eleni@nailsalon.gr',
+        phone: '6902345678',
+        specialties: 'Πεντικιρ, Spa, Gel',
+        workingHours: '10:00-19:00',
+        isActive: true,
+        services: ['Πεντικιρ Βασικό', 'Πεντικιρ με Γαλλικό', 'Gel Πεντικιρ', 'Spa Πεντικιρ', 'Πακέτο Γαλλικό (Μανικιρ & Πεντικιρ)']
+      },
+      {
+        name: 'Σοφία Κωνσταντίνου',
+        email: 'sofia@nailsalon.gr',
+        phone: '6903456789',
+        specialties: 'Όλες οι υπηρεσίες',
+        workingHours: '08:00-17:00',
+        isActive: true,
+        services: allServices.map(s => s.name)
+      }
+    ]
+
+    for (const employeeData of defaultEmployees) {
+      // Create employee
+      const employee = await prisma.employee.create({
+        data: {
+          name: employeeData.name,
+          email: employeeData.email,
+          phone: employeeData.phone,
+          specialties: employeeData.specialties,
+          workingHours: employeeData.workingHours,
+          isActive: employeeData.isActive
+        }
+      })
+
+      // Link employee to services
+      for (const serviceName of employeeData.services) {
+        const service = allServices.find(s => s.name === serviceName)
+        if (service) {
+          await prisma.employeeService.create({
+            data: {
+              employeeId: employee.id,
+              serviceId: service.id
+            }
+          })
+        }
+      }
+    }
+
+    console.log(`Created ${defaultEmployees.length} default employees`)
+  } else {
+    console.log(`Found ${existingEmployees.length} existing employees, skipping seed`)
+  }
+
   console.log('Database seeded successfully!')
 }
 
