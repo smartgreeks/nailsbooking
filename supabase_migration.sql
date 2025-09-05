@@ -94,40 +94,53 @@ CREATE UNIQUE INDEX IF NOT EXISTS "EmployeeService_employeeId_serviceId_key" ON 
 CREATE UNIQUE INDEX IF NOT EXISTS "AppointmentService_appointmentId_serviceId_key" ON "AppointmentService"("appointmentId", "serviceId");
 
 -- Add foreign key constraints (if not exists)
+-- First add constraints that don't depend on other tables
 DO $$ BEGIN
-    ALTER TABLE "EmployeeService" ADD CONSTRAINT "EmployeeService_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'EmployeeService_employeeId_fkey') THEN
+        ALTER TABLE "EmployeeService" ADD CONSTRAINT "EmployeeService_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
 EXCEPTION
-    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
 END $$;
 
 DO $$ BEGIN
-    ALTER TABLE "EmployeeService" ADD CONSTRAINT "EmployeeService_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "Service"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'EmployeeService_serviceId_fkey') THEN
+        ALTER TABLE "EmployeeService" ADD CONSTRAINT "EmployeeService_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "Service"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
 EXCEPTION
-    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
 END $$;
 
 DO $$ BEGIN
-    ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'Appointment_customerId_fkey') THEN
+        ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
 EXCEPTION
-    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
 END $$;
 
 DO $$ BEGIN
-    ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'Appointment_employeeId_fkey') THEN
+        ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+    END IF;
 EXCEPTION
-    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
 END $$;
 
 DO $$ BEGIN
-    ALTER TABLE "AppointmentService" ADD CONSTRAINT "AppointmentService_appointmentId_fkey" FOREIGN KEY ("appointmentId") REFERENCES "Appointment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'AppointmentService_appointmentId_fkey') THEN
+        ALTER TABLE "AppointmentService" ADD CONSTRAINT "AppointmentService_appointmentId_fkey" FOREIGN KEY ("appointmentId") REFERENCES "Appointment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
 EXCEPTION
-    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
 END $$;
 
 DO $$ BEGIN
-    ALTER TABLE "AppointmentService" ADD CONSTRAINT "AppointmentService_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "Service"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'AppointmentService_serviceId_fkey') THEN
+        ALTER TABLE "AppointmentService" ADD CONSTRAINT "AppointmentService_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "Service"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
 EXCEPTION
-    WHEN duplicate_object THEN null;
+    WHEN others THEN null;
 END $$;
 
 -- Insert some sample data (safe inserts)
